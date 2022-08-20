@@ -24,30 +24,75 @@ do -- Local repository version checking
 	end
 
 	local function GetHeadsPath(Path, Data)
+		-- "ref: refs/heads/feature/example"
+		-- "feature/example"
 		local _, _, Head = file.Read(Path .. "/.git/HEAD", "GAME"):find("heads/(.+)$")
-		local HeadPrefix = string.Split(Head, "/")
-		Head = HeadPrefix[#HeadPrefix]
-		HeadPrefix = table.concat(HeadPrefix, "/", 1, #HeadPrefix - 1)
-		if #HeadPrefix > 0 then HeadPrefix = HeadPrefix .. "/" end
 
+		-- { "feature", "example" }
+		local HeadPrefix = string.Split(Head, "/")
+
+		-- "example"
+		Head = HeadPrefix[#HeadPrefix]
+
+		-- "feature"
+		HeadPrefix = table.concat(HeadPrefix, "/", 1, #HeadPrefix - 1)
+
+		-- "example"
 		Data.Head = Head:Trim()
 
+		-- "addons/acf-3/.git/refs/heads/feature/"
 		local Heads = Path .. "/.git/refs/heads/" .. HeadPrefix .. "/"
 		return Heads
 	end
 
+	local function CheckPackedRefs(Path, Heads)
+		-- "addons/acf-3/.git/refs/heads/feature/example"
+		-- {"addons/acf-3/", "refs/heads/feature/example"}
+		-- "refs/heads/feature/example"
+		Heads = string.Split(Heads, ".git/")[2]
+
+		-- "addons/acf-3/.git/packed-refs"
+		local PackedRefPath = Path .. "/.git/packed-refs"
+		if not file.Exists(PackedRefPath, "GAME") then return end
+
+		-- [[# pack-refs with: peeled fully-peeled sorted
+		--   ebc5f59a706efe0c04e509b8f69b4394f3620b2f refs/heads/master
+		--   02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294 refs/heads/feature/example
+		--   6aa5a99103c1ade703599d374932af27723bf71e refs/remotes/origin/dev]]
+		local PackedRef = file.Read(PackedRefPath, "GAME")
+
+		-- "02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294"
+		local _, _, Code = PackedRef:find("^(.+) " .. Heads .. "$")
+
+		-- "02bf26b"
+		Code = Code:sub(1, 7)
+
+		local Date = file.Time(PackedRefPath, "GAME")
+
+		return Code, Date
+	end
+
 	local function GetGitData(Path, Data)
+		-- "addons/acf-3/.git/refs/heads/feature/"
 		local Heads = GetHeadsPath(Path, Data)
 		local Files = file.Find(Heads .. "*", "GAME")
+
+		-- Sometimes the refs/heads/ dir is just empty
+		-- As a fallback, we can also try the packed-refs file
+		if #Files == 0 then return CheckPackedRefs(Path, Data) end
+
 		local Code, Date
 
 		for _, Name in ipairs(Files) do
+			-- Name = "example"
+			-- Data.Head = "example"
 			if Name == Data.Head then
-				local SHA = file.Read(Heads .. Name, "GAME"):Trim()
+				-- "02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294"
+				local SHA = file.Read(Path, "GAME"):Trim()
 
+				-- "example-02bf26b"
 				Code = Name .. "-" .. SHA:sub(1, 7)
-				Date = file.Time(Heads .. Name, "GAME")
-
+				Date = file.Time(Path, "GAME")
 				break
 			end
 		end
@@ -72,6 +117,14 @@ do -- Local repository version checking
 			Data.NoFiles = true
 		elseif file.Exists(Path .. "/.git/HEAD", "GAME") then
 			local Code, Date = GetGitData(Path, Data)
+
+			-- There are some situations where it's
+			-- just not possible to get the current git branch
+			if not Code then
+				Data.Code    = "Git-Unknown"
+				Data.Date    = 0
+				return
+			end
 
 			UpdateOwner(Path, Data)
 
