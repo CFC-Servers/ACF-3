@@ -24,35 +24,48 @@ do -- Local repository version checking
 	end
 
 	local function GetHeadsPath(Path, Data)
+		print("GetHeadsPath:", Path)
 		-- "ref: refs/heads/feature/example"
 		-- "feature/example"
 		local _, _, Head = file.Read(Path .. "/.git/HEAD", "GAME"):find("heads/(.+)$")
+		print("Head:", Head)
 
 		-- { "feature", "example" }
 		local HeadPrefix = string.Split(Head, "/")
+		print("HeadPrefix:")
+		PrintTable(HeadPrefix)
 
 		-- "example"
 		Head = HeadPrefix[#HeadPrefix]
+		print("HeadPrefix[#HeadPrefix]:", Head)
 
 		-- "feature"
 		HeadPrefix = table.concat(HeadPrefix, "/", 1, #HeadPrefix - 1)
+		print("HeadPrefix", HeadPrefix)
 
 		-- "example"
 		Data.Head = Head:Trim()
+		print("Data.Head", Data.Head)
 
-		-- "addons/acf-3/.git/refs/heads/feature/"
-		local Heads = Path .. "/.git/refs/heads/" .. HeadPrefix .. "/"
+		-- "addons/acf-3/.git/refs/heads/feature"
+		local Heads = Path .. "/.git/refs/heads/" .. HeadPrefix
+		print("Heads", Heads)
 		return Heads
 	end
 
-	local function CheckPackedRefs(Path, Heads)
-		-- "addons/acf-3/.git/refs/heads/feature/example"
-		-- {"addons/acf-3/", "refs/heads/feature/example"}
-		-- "refs/heads/feature/example"
+	local function CheckPackedRefs(Path, Heads, Data)
+		-- "addons/acf-3/.git/refs/heads/feature"
+		-- {"addons/acf-3/", "refs/heads/feature"}
+		-- "refs/heads/feature"
+		print("CheckPackedRefs:", Path, Heads)
 		Heads = string.Split(Heads, ".git/")[2]
+		print("Heads:", Heads, Data.Head)
+		Heads = Heads .. Data.Head
+		print("Heads:", Heads)
 
 		-- "addons/acf-3/.git/packed-refs"
 		local PackedRefPath = Path .. "/.git/packed-refs"
+		print("PackedRefPath:", PackedRefPath)
 		if not file.Exists(PackedRefPath, "GAME") then return end
 
 		-- [[# pack-refs with: peeled fully-peeled sorted
@@ -60,32 +73,42 @@ do -- Local repository version checking
 		--   02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294 refs/heads/feature/example
 		--   6aa5a99103c1ade703599d374932af27723bf71e refs/remotes/origin/dev]]
 		local PackedRef = file.Read(PackedRefPath, "GAME")
+		print("PackedRef:")
+		print(PackedRef)
 
 		-- "02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294"
 		local _, _, Code = PackedRef:find("^(.+) " .. Heads .. "$")
+		print("Pattern: ^(.+) ", Heads, "$")
+		print("Code:", Code)
 
 		-- "02bf26b"
 		Code = Code:sub(1, 7)
+		print("Code:", Code)
 
 		local Date = file.Time(PackedRefPath, "GAME")
+		print("Date:", Date)
 
 		return Code, Date
 	end
 
 	local function GetGitData(Path, Data)
+		print("GetGitData:", Path)
 		-- "addons/acf-3/.git/refs/heads/feature/"
 		local Heads = GetHeadsPath(Path, Data)
+		print("Heads:", Heads)
 		local Files = file.Find(Heads .. "*", "GAME")
+		print("Files:", #Files)
 
 		-- Sometimes the refs/heads/ dir is just empty
 		-- As a fallback, we can also try the packed-refs file
-		if #Files == 0 then return CheckPackedRefs(Path, Data) end
+		if #Files == 0 then return CheckPackedRefs(Path, Heads, Data) end
 
 		local Code, Date
 
 		for _, Name in ipairs(Files) do
 			-- Name = "example"
 			-- Data.Head = "example"
+			print("_, Name", Name, Data.Head)
 			if Name == Data.Head then
 				-- "02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294"
 				local SHA = file.Read(Path, "GAME"):Trim()
