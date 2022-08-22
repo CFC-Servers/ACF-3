@@ -61,7 +61,7 @@ do -- Local repository version checking
 		Heads = string.Split(Heads, ".git/")[2]
 		print("Heads:", Heads, Data.Head)
 		Heads = Heads .. Data.Head
-		print("Heads:", Heads)
+		print("Heads .. Data.Head:", Heads)
 
 		-- "addons/acf-3/.git/packed-refs"
 		local PackedRefPath = Path .. "/.git/packed-refs"
