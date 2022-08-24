@@ -24,7 +24,6 @@ do -- Local repository version checking
 	end
 
 	local function GetHeadsPath(Path, Data)
-		print("GetHeadsPath:", Path)
 		-- "ref: refs/heads/feature/example"
 		-- "feature/example"
 		local _, _, Head = file.Read(Path .. "/.git/HEAD", "GAME"):find("heads/(.+)$")
@@ -39,16 +38,17 @@ do -- Local repository version checking
 		Head = HeadPrefix[#HeadPrefix]
 		print("HeadPrefix[#HeadPrefix]:", Head)
 
-		-- "feature"
+		-- "/feature"
 		HeadPrefix = table.concat(HeadPrefix, "/", 1, #HeadPrefix - 1)
+		HeadPrefix = #HeadPrefix > 0 and "/" .. HeadPrefix or ""
 		print("HeadPrefix", HeadPrefix)
 
 		-- "example"
 		Data.Head = Head:Trim()
 		print("Data.Head", Data.Head)
 
-		-- "addons/acf-3/.git/refs/heads/feature"
-		local Heads = Path .. "/.git/refs/heads/" .. HeadPrefix
+		-- "addons/acf-3/.git/refs/heads/feature/"
+		local Heads = Path .. "/.git/refs/heads" .. HeadPrefix .. "/"
 		print("Heads", Heads)
 		return Heads
 	end
