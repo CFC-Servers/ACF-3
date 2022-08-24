@@ -77,8 +77,9 @@ do -- Local repository version checking
 		print(PackedRef)
 
 		-- "02bf26bf4bf6501a0e0aaf0c4e4c68a9d728f294"
-		local _, _, Code = PackedRef:find("\n(.+) " .. Heads)
-		print("Pattern: ^(.+) ", Heads, "$")
+		local pattern = "([%a%d]+) " .. Heads
+		local _, _, Code = PackedRef:find(pattern)
+		print("Pattern: ", pattern)
 		print("Code:", Code)
 
 		-- "02bf26b"
