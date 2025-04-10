@@ -9,8 +9,15 @@ on:
       - "dev"
 
 jobs:
-  run-gluatest:
-    uses: CFC-Servers/GLuaTest/.github/workflows/run_tests.yml@main
-
+  run_tests:
+    uses: CFC-Servers/GLuaTest/.github/workflows/run_tests.yml@feature/runner-improvement
     with:
+      dockerbuild: true
+      gluatest-ref: "feature/runner-improvement"
       requirements: lua/tests/acf/deps.txt
+    strategy:
+      matrix:
+        branch:
+          - "live"
+          - "x86-64"
+      fail-fast: false
